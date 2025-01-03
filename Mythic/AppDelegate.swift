@@ -1,3 +1,4 @@
+
 //
 //  AppDelegate.swift
 //  Mythic
@@ -14,11 +15,10 @@
 // You should have received a copy of the GNU General Public License along with this program. If not, see http://www.gnu.org/licenses/.
 
 // You can fold these comments by pressing [⌃ ⇧ ⌘ ◀︎], unfold with [⌃ ⇧ ⌘ ▶︎]
-
+import SwiftUI
 import Firebase
 import OSLog
 import Sparkle
-import SwiftUI
 import SwordRPC
 import UserNotifications
 

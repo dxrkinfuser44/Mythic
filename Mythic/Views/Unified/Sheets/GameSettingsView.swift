@@ -1,7 +1,5 @@
-// where the hell is the comment
-
-import Shimmer
 import SwiftUI
+import Shimmer
 import SwordRPC
 
 struct GameSettingsView: View {

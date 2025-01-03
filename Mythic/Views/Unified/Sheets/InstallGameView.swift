@@ -246,7 +246,3 @@ struct InstallViewEvo: View {
         }
     }
 }
-
-#Preview {
-    InstallViewEvo(game: .constant(.init(source: .epic, title: "Fortnite (Test)", id: "Fortnite")), isPresented: .constant(true))
-}

@@ -63,6 +63,9 @@ struct MythicApp: App {
                     .environmentObject(sparkleController)
                     .frame(minWidth: 750, minHeight: 390)
                     .onAppear { toggleTitleBar(true) }
+                    .backgroundTask(.appRefresh) {
+                        // Perform background task here
+                    }
             }
         }
 
