@@ -48,7 +48,3 @@ struct DownloadsEvo: View {
         }
     }
 }
-
-#Preview {
-    DownloadsEvo()
-}

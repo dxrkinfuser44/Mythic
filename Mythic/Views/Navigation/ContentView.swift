@@ -156,10 +156,3 @@ struct ContentView: View {
         .whatsNewSheet()
     }
 }
-
-// MARK: - Preview
-#Preview {
-    ContentView()
-        .environmentObject(NetworkMonitor())
-        .environmentObject(SparkleController())
-}
