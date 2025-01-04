@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-			5A1584F12C27B0B300401048 /* GameListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1584F02C27B0B300401048 /* GameListRow.swift */; };
+		5A1584F12C27B0B300401048 /* GameListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1584F02C27B0B300401048 /* GameListRow.swift */; };
 		5A62AE982C27DB1200BA31D2 /* GameListEvoVM.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A62AE972C27DB1200BA31D2 /* GameListEvoVM.swift */; };
 		5A9573AA2C29BBEC009C8F85 /* SparkleController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9573A92C29BBEC009C8F85 /* SparkleController.swift */; };
 		6A0688442C2BCE8B004DF10F /* DownloadCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0688432C2BCE87004DF10F /* DownloadCard.swift */; };
