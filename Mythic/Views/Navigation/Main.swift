@@ -162,3 +162,4 @@ struct MainView: View {
         .environmentObject(NetworkMonitor())
         .environmentObject(SparkleController())
 }
+
