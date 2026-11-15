@@ -116,8 +116,9 @@ class SteamGameManager {
     @discardableResult
     static func install(game: SteamGame,
                         platform: Game.Platform,
+                        containerURL: URL? = nil,
                         qualityOfService: QualityOfService) async throws -> GameOperation {
-        let context = try operationContext(for: game, requestedPlatform: platform)
+        let context = try operationContext(for: game, requestedPlatform: platform, requestedContainerURL: containerURL)
         return await queueOperation(game: game, type: .install, action: "install", context: context)
     }
 
@@ -174,7 +175,8 @@ class SteamGameManager {
     }
 
     private static func operationContext(for game: SteamGame,
-                                         requestedPlatform: Game.Platform? = nil) throws -> OperationContext {
+                                         requestedPlatform: Game.Platform? = nil,
+                                         requestedContainerURL: URL? = nil) throws -> OperationContext {
         guard let appID = game.appID,
               SteamClient.isValidAppID(appID) else {
             throw SteamClient.InvalidAppIDError()
@@ -187,14 +189,14 @@ class SteamGameManager {
         } else {
             gamePlatform = nil
         }
-        let platform = installedApp?.location.platform
+        let platform = requestedPlatform
+            ?? installedApp?.location.platform
             ?? gamePlatform
-            ?? requestedPlatform
             ?? (SteamClient.isNativeClientInstalled ? .macOS : .windows)
         return OperationContext(
             appID: appID,
             platform: platform,
-            containerURL: installedApp?.location.containerURL ?? game.containerURL
+            containerURL: requestedContainerURL ?? installedApp?.location.containerURL ?? game.containerURL
         )
     }
 

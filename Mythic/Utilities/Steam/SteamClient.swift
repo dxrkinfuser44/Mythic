@@ -263,10 +263,11 @@ enum SteamClient {
     }
 
     /// Main-actor isolated so the non-Sendable `SteamGame` results never cross an isolation boundary (Swift 6).
-    @MainActor static func fetchOwnedGames() async throws -> [SteamGame] {
+    @MainActor static func fetchOwnedGames() async throws -> [SteamGame]? {
         guard let steamID = SteamAuth.currentSteamID,
               SteamConfig.webAPIKey != nil else {
-            return []
+            log.debug("Skipping owned-games refresh because Steam sign-in or a Web API key is unavailable.")
+            return nil
         }
 
         let ownedGames = try await SteamWebAPI.getOwnedGames(steamID: steamID)

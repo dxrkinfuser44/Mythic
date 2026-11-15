@@ -103,18 +103,18 @@ import OSLog
         if storefronts.contains(.steam) {
             do {
                 let installed = SteamClient.fetchInstalledGames()
-                let owned: [SteamGame]
+                let owned: [SteamGame]?
                 let ownedFetchError: Error?
                 do {
                     owned = try await SteamClient.fetchOwnedGames()
                     ownedFetchError = nil
                 } catch {
-                    owned = []
+                    owned = nil
                     ownedFetchError = error
                 }
 
                 // add owned games that aren't installed
-                for game in owned where !installed.contains(where: { $0 == game }) {
+                for game in owned ?? [] where !installed.contains(where: { $0 == game }) {
                     if let existing = library.first(where: { $0 == game }) {
                         // previously installed, but no longer present on disk
                         existing.installationState = .uninstalled
@@ -140,10 +140,12 @@ import OSLog
                     throw ownedFetchError
                 }
 
-                // drop Steam games that are neither installed nor owned any more (uninstalled, signed out, or key removed)
-                let currentIDs = Set((installed + owned).map(\.id))
-                for game in library where game.storefront == .steam && !currentIDs.contains(game.id) {
-                    library.remove(game)
+                // Only prune when Steam returned a complete owned-games list.
+                if let owned {
+                    let currentIDs = Set((installed + owned).map(\.id))
+                    for game in library where game.storefront == .steam && !currentIDs.contains(game.id) {
+                        library.remove(game)
+                    }
                 }
             } catch {
                 log.error("Unable to refresh game data from Steam: \(error.localizedDescription)")
