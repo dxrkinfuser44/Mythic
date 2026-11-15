@@ -54,7 +54,7 @@ enum SteamAuth {
     }
 
     /// Verifies an OpenID callback. Throws on any mismatch and returns the verified SteamID64.
-    static func verify(callbackURL: URL, expectedNonce: String, session: URLSession = .shared) async throws -> String {
+    static func verify(callbackURL: URL, expectedNonce: String, session: URLSession = SteamWebAPI.session) async throws -> String {
         guard callbackURL.scheme?.lowercased() == "https",
               isCallback(callbackURL),
               let components = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false),

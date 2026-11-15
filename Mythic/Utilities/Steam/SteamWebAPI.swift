@@ -11,6 +11,32 @@ enum SteamWebAPI {
 
     private static let responseLimit = 16 * 1024 * 1024
 
+    /// Dedicated session for all Steam HTTP traffic (Web API and OpenID verification).
+    ///
+    /// * No URL cache: the Web API key travels in the query string, and `URLSession.shared` would persist the request URL
+    ///   (and the owned-games response) in the app's on-disk `Cache.db`.
+    /// * No cookies / credential storage.
+    /// * Redirects are refused, so a request carrying the key (or an OpenID assertion) is never re-sent to another URL.
+    static let session: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.urlCache = nil
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.httpCookieStorage = nil
+        configuration.httpShouldSetCookies = false
+        configuration.urlCredentialStorage = nil
+        configuration.tlsMinimumSupportedProtocolVersion = .TLSv12
+        return URLSession(configuration: configuration, delegate: RedirectRefusingDelegate(), delegateQueue: nil)
+    }()
+
+    private final class RedirectRefusingDelegate: NSObject, URLSessionTaskDelegate, Sendable {
+        func urlSession(_ session: URLSession,
+                        task: URLSessionTask,
+                        willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest) async -> URLRequest? {
+            nil
+        }
+    }
+
     struct OwnedGame: Decodable, Hashable {
         let appid: Int
         let name: String?
@@ -44,7 +70,8 @@ enum SteamWebAPI {
         }
     }
 
-    static func getOwnedGames(steamID: String, session: URLSession = .shared) async throws -> [OwnedGame] {
+    static func getOwnedGames(steamID: String,
+                              session: URLSession = SteamWebAPI.session) async throws -> [OwnedGame] {
         try validateSteamID(steamID)
         guard let key = SteamConfig.webAPIKey else {
             throw MissingAPIKeyError()
@@ -63,7 +90,8 @@ enum SteamWebAPI {
         return try JSONDecoder().decode(OwnedGamesResponse.self, from: data).response.games ?? []
     }
 
-    static func getPlayerSummary(steamID: String, session: URLSession = .shared) async throws -> PlayerSummary? {
+    static func getPlayerSummary(steamID: String,
+                                 session: URLSession = SteamWebAPI.session) async throws -> PlayerSummary? {
         try validateSteamID(steamID)
         guard let key = SteamConfig.webAPIKey else {
             throw MissingAPIKeyError()
@@ -118,8 +146,21 @@ enum SteamWebAPI {
         guard url.scheme?.lowercased() == "https" else {
             throw URLError(.badURL)
         }
-        let request = URLRequest(url: url, timeoutInterval: 15)
-        let (data, response) = try await boundedData(for: request, session: session)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.httpShouldHandleCookies = false
+        let result: (Data, URLResponse)
+        do {
+            result = try await boundedData(for: request, session: session)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError {
+            // Drop `userInfo`: NSURLErrorFailingURLErrorKey / NSURLErrorFailingURLStringErrorKey hold the full request URL,
+            // including `key=<Web API key>`, and would leak it into logs, alerts or crash reports via `"\(error)"`.
+            throw URLError(error.code)
+        } catch {
+            throw URLError(.unknown)
+        }
+        let (data, response) = result
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
