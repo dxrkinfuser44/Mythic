@@ -26,6 +26,8 @@ struct OnboardingView: View {
         Color(nsColor: .windowBackgroundColor)
     ]
     @State private var onboardingError: Error?
+    @State private var isRosettaInstallationRequested = false
+    @State private var isEngineInstallationRequested = false
 
     @State private var isHoveringOverProgressView: Bool = false
 
@@ -86,27 +88,59 @@ struct OnboardingView: View {
                                     }
                                 }
                         case .rosetta:
-                            RosettaStage(
-                                isPresented: .init( // Handles presentation within onboarding
-                                    get: { true },
-                                    set: { newValue in
-                                        if !newValue {
-                                            viewModel.stepStage()
+                            if isRosettaInstallationRequested {
+                                RosettaStage(
+                                    isPresented: .init( // Handles presentation within onboarding
+                                        get: { true },
+                                        set: { newValue in
+                                            if !newValue {
+                                                viewModel.stepStage()
+                                            }
                                         }
-                                    }
+                                    )
                                 )
-                            )
+                            } else {
+                                VStack(spacing: 12) {
+                                    Text("Rosetta Setup")
+                                        .font(.title.bold())
+                                    Text("Rosetta is needed for Intel apps and Windows games on Apple silicon. You can install it later.")
+                                        .multilineTextAlignment(.center)
+                                    Button("Set Up Rosetta") {
+                                        isRosettaInstallationRequested = true
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    Button("Continue Without Rosetta") {
+                                        viewModel.stepStage()
+                                    }
+                                }
+                            }
                         case .engine:
-                            EngineStage(
-                                isPresented: .init( // Handles presentation within onboarding
-                                    get: { true },
-                                    set: { newValue in
-                                        if !newValue {
-                                            viewModel.stepStage()
+                            if isEngineInstallationRequested {
+                                EngineStage(
+                                    isPresented: .init( // Handles presentation within onboarding
+                                        get: { true },
+                                        set: { newValue in
+                                            if !newValue {
+                                                viewModel.stepStage()
+                                            }
                                         }
-                                    }
+                                    )
                                 )
-                            )
+                            } else {
+                                VStack(spacing: 12) {
+                                    Text("Mythic Engine Setup")
+                                        .font(.title.bold())
+                                    Text("Mythic Engine is required for containers and Windows games. You can install it later.")
+                                        .multilineTextAlignment(.center)
+                                    Button("Set Up Mythic Engine") {
+                                        isEngineInstallationRequested = true
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    Button("Continue Without Mythic Engine") {
+                                        viewModel.stepStage(by: 2)
+                                    }
+                                }
+                            }
                         case .defaultContainerSetup:
                             DefaultContainerSetupStage(
                                 isPresented: .init( // Handles presentation within onboarding

@@ -50,4 +50,8 @@ Mythic uses the following Swift dependencies:
 - [SwiftUI-Shimmer](https://github.com/markiv/SwiftUI-Shimmer) — A super-light modifier that adds a shimmering effect to any SwiftUI View.
 - [DockProgress](https://github.com/sindresorhus/DockProgress) — Show progress in your app's Dock icon
 
+On this branch, setup can continue without Rosetta or Mythic Engine. Native macOS features remain available, but
+containers and Windows games require Mythic Engine, and Intel apps on Apple silicon require Rosetta. To set them up
+later, choose **Mythic > Restart Onboarding...**. The Swift packages listed above are still required to build the app.
+
 <sub>Copyright © 2023-2025 vapidinfinity. All rights reserved.</sub>

@@ -26,6 +26,7 @@ struct MythicApp: App {
             Group {
                 if isOnboardingPresented {
                     OnboardingView()
+                        .environmentObject(networkMonitor)
                         .task(priority: .high) {
                             await MainActor.run {
                                 NSApp.mainWindow?.isImmersive = true
