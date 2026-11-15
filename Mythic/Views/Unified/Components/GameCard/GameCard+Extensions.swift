@@ -102,10 +102,27 @@ extension GameCard {
                 @Bindable private var operationManager: GameOperationManager = .shared
 
                 @State private var isInstallSheetPresented = false
+                @State private var installError: Error?
+                @State private var isInstallErrorAlertPresented = false
 
                 var body: some View {
                     Button {
-                        isInstallSheetPresented = true
+                        if let steamGame = game as? SteamGame {
+                            Task {
+                                do {
+                                    _ = try await SteamGameManager.install(
+                                        game: steamGame,
+                                        platform: steamGame.getSupportedPlatforms()?.first ?? .macOS,
+                                        qualityOfService: .userInitiated
+                                    )
+                                } catch {
+                                    installError = error
+                                    isInstallErrorAlertPresented = true
+                                }
+                            }
+                        } else {
+                            isInstallSheetPresented = true
+                        }
                     } label: {
                         if withLabel {
                             Label("Install", systemImage: "arrow.down.to.line")
@@ -119,6 +136,17 @@ extension GameCard {
                     .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .install }))
                     .help("Install \(game.description)")
 
+                    .alert("Unable to install \"\(game.title)\".",
+                           isPresented: $isInstallErrorAlertPresented,
+                           presenting: installError) { _ in
+                        if #available(macOS 26.0, *) {
+                            Button(role: .close, action: {})
+                        } else {
+                            Button("OK", role: .cancel, action: {})
+                        }
+                    } message: { error in
+                        Text(error.localizedDescription)
+                    }
                     .sheet(isPresented: $isInstallSheetPresented) {
                         switch game {
                         case let epicGame as EpicGamesGame:
@@ -355,6 +383,13 @@ extension GameCard {
                 case let localGame as LocalGame:
                     LocalGameUninstallationView(game: .init(get: { localGame }, set: { game = $0 }),
                                                 isPresented: $isUninstallSheetPresented)
+                    .padding()
+                    .frame(width: 700, height: 380)
+                case let steamGame as SteamGame:
+                    SteamGameUninstallationView(
+                        game: .init(get: { steamGame }, set: { game = $0 }),
+                        isPresented: $isUninstallSheetPresented
+                    )
                     .padding()
                     .frame(width: 700, height: 380)
                 default: EmptyView()
