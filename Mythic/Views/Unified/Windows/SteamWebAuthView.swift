@@ -137,6 +137,15 @@ private struct SteamAuthWebView: NSViewRepresentable {
 
         func webView(
             _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void
+        ) {
+            // the sign-in window never downloads anything
+            decisionHandler(navigationResponse.canShowMIMEType ? .allow : .cancel)
+        }
+
+        func webView(
+            _ webView: WKWebView,
             createWebViewWith configuration: WKWebViewConfiguration,
             for navigationAction: WKNavigationAction,
             windowFeatures: WKWindowFeatures
@@ -160,8 +169,15 @@ private struct SteamAuthWebView: NSViewRepresentable {
             guard isMainFrame else { return .allow }
 
             let host = url.host?.lowercased() ?? ""
-            guard isAllowedSteamHost(host) else {
-                NSWorkspace.shared.open(url)
+            guard isAllowedSteamHost(host),
+                  url.port == nil || url.port == 443,
+                  url.user == nil,
+                  url.password == nil else {
+                // Only hand a link to the browser when the user clicked it; never for script-initiated navigations or
+                // redirects, and never with embedded credentials.
+                if action.navigationType == .linkActivated, url.user == nil, url.password == nil {
+                    NSWorkspace.shared.open(url)
+                }
                 return .cancel
             }
             return .allow
