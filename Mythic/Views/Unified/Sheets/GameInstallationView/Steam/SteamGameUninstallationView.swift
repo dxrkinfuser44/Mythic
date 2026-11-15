@@ -3,8 +3,6 @@
 //  Mythic
 //
 
-// Copyright © 2023-2025 vapidinfinity
-
 import SwiftUI
 
 struct SteamGameUninstallationView: View {
