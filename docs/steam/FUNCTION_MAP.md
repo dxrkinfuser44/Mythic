@@ -1,6 +1,6 @@
 # Steam Support — Function Map & Contract (v2, on upstream MythicApp/Mythic)
 
-Binding contract. Every file has exactly one owner. Implement signatures exactly; don't rename; don't touch files you don't own.
+Original implementation map; signatures below reflect subsequent integration and security fixes.
 
 **Toolchain constraints:** Swift 6 language mode (`SWIFT_VERSION = 6.0`), macOS 14 deployment target, app not sandboxed,
 hardened runtime. Swift 6 mode means **global/static mutable state is a compile error** unless protected: use
@@ -63,14 +63,14 @@ enum SteamConfig { static var webAPIKey: String?; static var userWebAPIKey: Stri
                    static var openIDRealm: URL; static var openIDReturnTo: URL }
 enum SteamAuth { static var currentSteamID: String?; static var isSignedIn: Bool; static func makeLoginURL(nonce: String) -> URL
                  static func isCallback(_ url: URL) -> Bool
-                 static func verify(callbackURL: URL, expectedNonce: String, session: URLSession = .shared) async throws -> String
+                 static func verify(callbackURL: URL, expectedNonce: String, session: URLSession = SteamWebAPI.session) async throws -> String
                  static func completeSignIn(steamID: String) throws; static func signOut()   // keychain only
                  struct VerificationError: LocalizedError }
 enum SteamWebAPI { struct OwnedGame { appid: Int; name: String?; playtimeForever: Int?; imageIconURL: String? }
                    struct PlayerSummary { steamid: String; personaname: String; avatarfull: String? }
                    struct MissingAPIKeyError; struct HTTPError
-                   static func getOwnedGames(steamID: String, session: URLSession = .shared) async throws -> [OwnedGame]
-                   static func getPlayerSummary(steamID: String, session: URLSession = .shared) async throws -> PlayerSummary? }
+                   static func getOwnedGames(steamID: String, session: URLSession = SteamWebAPI.session) async throws -> [OwnedGame]
+                   static func getPlayerSummary(steamID: String, session: URLSession = SteamWebAPI.session) async throws -> PlayerSummary? }
 ```
 
 ## Agent A — `SteamClient.swift` (Steam client discovery + steam:// actions; no Game-model logic beyond building SteamGames)
@@ -114,7 +114,7 @@ enum SteamClient {
     /// Library assembly for GameDataStore. Owned games only when SteamAuth.currentSteamID != nil && SteamConfig.webAPIKey != nil.
     /// Installed → .installed(location: installDirectory, platform: location.platform) and containerURL = location.containerURL.
     static func fetchInstalledGames() -> [SteamGame]
-    static func fetchOwnedGames() async throws -> [SteamGame]  // .uninstalled
+    @MainActor static func fetchOwnedGames() async throws -> [SteamGame]? // nil when sign-in or key is unavailable
 }
 ```
 
@@ -145,7 +145,7 @@ class SteamGameManager {
     static var log: Logger { .custom(category: "SteamGameManager") }
     struct UnsupportedOperationError: LocalizedError   // "Steam manages this; use the Steam client."
     @discardableResult @MainActor static func launch(game: SteamGame) async throws -> GameOperation      // type .launch, action "rungameid", extraArguments: game.launchArguments; minimise per "minimiseOnGameLaunch"
-    @discardableResult static func install(game: SteamGame, platform: Game.Platform, qualityOfService: QualityOfService) async throws -> GameOperation // "install"
+    @discardableResult static func install(game: SteamGame, platform: Game.Platform, containerURL: URL? = nil, qualityOfService: QualityOfService) async throws -> GameOperation // "install"
     @discardableResult static func update(game: SteamGame, qualityOfService: QualityOfService) async throws -> GameOperation   // type .update, action "install" (Steam updates on its own; this surfaces the app in the client so the update runs)
     @discardableResult static func repair(game: SteamGame, qualityOfService: QualityOfService) async throws -> GameOperation   // "validate"
     @discardableResult @MainActor static func uninstall(game: SteamGame, persistFiles: Bool) async throws -> GameOperation      // "uninstall" (persistFiles ignored; Steam decides)
@@ -182,7 +182,7 @@ else the `platform` argument / `.macOS` if native client installed else `.window
   Wire into `GameImportView` (remove `.hidden()`, fill the empty Steam tab, add to the pre-macOS-15 `TabView`).
 * `SteamGameUninstallationView(game: Binding<SteamGame>, isPresented:)`: mirror `LocalGameUninstallationView` /
   `EpicGamesGameUninstallationView` using `BaseGameInstallationView`; calls `SteamGameManager.uninstall(game:persistFiles:)`; explain Steam's uninstaller will open.
-* `GameCard+Extensions.swift`: `InstallButton` — for `SteamGame`, don't present the (empty) sheet; instead run
-  `try await SteamGameManager.install(game:platform:qualityOfService: .userInitiated)` with error alert; keep Epic behaviour unchanged.
+* `GameCard+Extensions.swift`: `InstallButton` — for `SteamGame`, let the user choose the native client or a Windows
+  Steam container, then call `SteamGameManager.install(game:platform:containerURL:qualityOfService:)` with error handling.
   Uninstall sheet `switch game` → add `case let steamGame as SteamGame:` presenting `SteamGameUninstallationView`.
   `VerificationButton` already calls `game.verifyInstallation()` → fine. Do not alter Epic/Local paths.
