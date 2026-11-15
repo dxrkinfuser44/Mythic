@@ -70,6 +70,12 @@ enum SteamWebAPI {
         }
     }
 
+    struct OwnedGamesUnavailableError: LocalizedError {
+        var errorDescription: String? {
+            String(localized: "Steam did not provide a complete owned-games list. Check the account's Game Details privacy settings.")
+        }
+    }
+
     static func getOwnedGames(steamID: String,
                               session: URLSession = SteamWebAPI.session) async throws -> [OwnedGame] {
         try validateSteamID(steamID)
@@ -87,7 +93,15 @@ enum SteamWebAPI {
             ]
         )
         let data = try await getData(from: url, session: session)
-        return try JSONDecoder().decode(OwnedGamesResponse.self, from: data).response.games ?? []
+        let response = try JSONDecoder().decode(OwnedGamesResponse.self, from: data).response
+        guard let count = response.gameCount, count >= 0 else {
+            throw OwnedGamesUnavailableError()
+        }
+        let games = response.games ?? []
+        guard games.count == count else {
+            throw OwnedGamesUnavailableError()
+        }
+        return games
     }
 
     static func getPlayerSummary(steamID: String,
@@ -109,7 +123,13 @@ enum SteamWebAPI {
 
     private struct OwnedGamesResponse: Decodable {
         struct Payload: Decodable {
+            let gameCount: Int?
             let games: [OwnedGame]?
+
+            enum CodingKeys: String, CodingKey {
+                case gameCount = "game_count"
+                case games
+            }
         }
 
         let response: Payload

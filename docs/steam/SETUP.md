@@ -32,9 +32,12 @@ Open `Mythic.xcodeproj`, resolve packages, build the `Mythic` scheme (Swift 6 mo
 * Accounts → Steam: sign in through Steam's own OpenID page (Mythic never sees your password).
 * Installed games are read from `~/Library/Application Support/Steam` and from Windows Steam inside each Wine container.
 * Install / launch / uninstall are handed to the Steam client via `steam://` URLs — the Steam client must be installed
-  (natively, or inside a Mythic container for Windows-only titles).
+  (natively, or inside a Mythic container for Windows-only titles). For an installation, choose the macOS client or
+  the Windows client in the appropriate container.
 * Steam controls these operations after handoff. Once an installation, update, or removal has finished in Steam,
   refresh the Mythic library to pick up the new state; a sent-request notification does not mean the operation is done.
+* If the owned-games list is inaccessible, incomplete, or unavailable, Mythic retains previously saved Steam games.
+  Steam's Game Details privacy settings must allow the Web API to read the owned library.
 
 ## 4. Checks on macOS
 
@@ -42,9 +45,10 @@ Open `Mythic.xcodeproj`, resolve packages, build the `Mythic` scheme (Swift 6 mo
 * With a Steam API key configured, interrupt the owned-games request and confirm installed Steam games still appear;
   previously saved owned games should not be removed.
 * With Epic unavailable, confirm Steam install, update and verify actions remain available when otherwise applicable.
-  With only Windows Steam installed in the game's selected container, confirm an uninstalled Steam game's install
-  action opens that client.
+  With native Steam and Windows Steam in multiple containers, confirm the install action opens the client selected.
 * Start an install or uninstall from Mythic. Confirm the notification says the request was sent, not that it completed;
   after finishing in Steam, refresh the library and confirm the installation state updates.
+* Make the Steam Game Details private, refresh, and confirm saved owned games and their settings are retained. Also
+  check an account with a public empty library and one with visible owned games.
 
 See `FUNCTION_MAP.md` for the API contract and `SECURITY_*.md` for audit results.

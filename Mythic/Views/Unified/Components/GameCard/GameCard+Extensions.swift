@@ -106,20 +106,20 @@ extension GameCard {
                 @State private var isInstallSheetPresented = false
                 @State private var installError: Error?
                 @State private var isInstallErrorAlertPresented = false
+                @State private var isSteamClientSelectionPresented = false
+                @State private var hasNativeSteam = false
+                @State private var steamContainers: [URL] = []
 
                 var body: some View {
                     Button {
-                        if let steamGame = game as? SteamGame {
-                            Task {
-                                do {
-                                    _ = try await SteamGameManager.install(
-                                        game: steamGame,
-                                        qualityOfService: .userInitiated
-                                    )
-                                } catch {
-                                    installError = error
-                                    isInstallErrorAlertPresented = true
-                                }
+                        if game is SteamGame {
+                            hasNativeSteam = SteamClient.isNativeClientInstalled
+                            steamContainers = SteamClient.installLocations.compactMap(\.containerURL)
+                            if hasNativeSteam || !steamContainers.isEmpty {
+                                isSteamClientSelectionPresented = true
+                            } else {
+                                installError = SteamClient.ClientNotInstalledError()
+                                isInstallErrorAlertPresented = true
                             }
                         } else {
                             isInstallSheetPresented = true
@@ -139,6 +139,24 @@ extension GameCard {
                     .help("Install \(game.description)")
                     .accessibilityLabel("Install \(game.description)")
 
+                    .confirmationDialog("Choose a Steam client",
+                                        isPresented: $isSteamClientSelectionPresented) {
+                        if let steamGame = game as? SteamGame {
+                            if hasNativeSteam {
+                                Button("macOS Steam") {
+                                    installSteamGame(steamGame, platform: .macOS)
+                                }
+                            }
+                            ForEach(steamContainers, id: \.self) { containerURL in
+                                Button("Windows Steam — \(containerURL.prettyPath)") {
+                                    installSteamGame(steamGame, platform: .windows, containerURL: containerURL)
+                                }
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Choose where to install \(game.title). Steam will handle the installation.")
+                    }
                     .alert("Unable to install \"\(game.title)\".",
                            isPresented: $isInstallErrorAlertPresented,
                            presenting: installError) { _ in
@@ -161,6 +179,22 @@ extension GameCard {
                             .padding()
                             .frame(width: 700, height: 380)
                         default: EmptyView()
+                        }
+                    }
+                }
+
+                private func installSteamGame(_ steamGame: SteamGame, platform: Game.Platform, containerURL: URL? = nil) {
+                    Task {
+                        do {
+                            _ = try await SteamGameManager.install(
+                                game: steamGame,
+                                platform: platform,
+                                containerURL: containerURL,
+                                qualityOfService: .userInitiated
+                            )
+                        } catch {
+                            installError = error
+                            isInstallErrorAlertPresented = true
                         }
                     }
                 }
