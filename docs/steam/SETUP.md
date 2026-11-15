@@ -33,6 +33,8 @@ Open `Mythic.xcodeproj`, resolve packages, build the `Mythic` scheme (Swift 6 mo
 * Installed games are read from `~/Library/Application Support/Steam` and from Windows Steam inside each Wine container.
 * Install / launch / uninstall are handed to the Steam client via `steam://` URLs — the Steam client must be installed
   (natively, or inside a Mythic container for Windows-only titles).
+* Steam controls these operations after handoff. Once an installation, update, or removal has finished in Steam,
+  refresh the Mythic library to pick up the new state; a sent-request notification does not mean the operation is done.
 
 ## 4. Checks on macOS
 
@@ -42,5 +44,7 @@ Open `Mythic.xcodeproj`, resolve packages, build the `Mythic` scheme (Swift 6 mo
 * With Epic unavailable, confirm Steam install, update and verify actions remain available when otherwise applicable.
   With only Windows Steam installed in the game's selected container, confirm an uninstalled Steam game's install
   action opens that client.
+* Start an install or uninstall from Mythic. Confirm the notification says the request was sent, not that it completed;
+  after finishing in Steam, refresh the library and confirm the installation state updates.
 
 See `FUNCTION_MAP.md` for the API contract and `SECURITY_*.md` for audit results.

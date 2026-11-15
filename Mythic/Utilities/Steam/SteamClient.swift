@@ -251,7 +251,7 @@ enum SteamClient {
     }
 
     static func fetchInstalledGames() -> [SteamGame] {
-        installedApps().compactMap { app in
+        installedApps(forceRefresh: true).compactMap { app in
             guard let gameID = gameID(forAppID: app.appID) else { return nil }
             return SteamGame(
                 id: gameID,
