@@ -104,7 +104,7 @@ struct AccountsView: View {
                         steamSignedInUser = steamID
                         Task { @MainActor in
                             if let summary = try? await SteamWebAPI.getPlayerSummary(steamID: steamID) {
-                                steamSignedInUser = summary.personaname
+                                steamSignedInUser = SteamClient.sanitizedTitle(summary.personaname) ?? steamID
                             }
                             do {
                                 try await GameDataStore.shared.refreshFromStorefronts(.steam)
@@ -137,7 +137,7 @@ struct AccountsView: View {
                     }
                     steamSignedInUser = steamID
                     if let summary = try? await SteamWebAPI.getPlayerSummary(steamID: steamID) {
-                        steamSignedInUser = summary.personaname
+                        steamSignedInUser = SteamClient.sanitizedTitle(summary.personaname) ?? steamID
                     }
                 }
             }
