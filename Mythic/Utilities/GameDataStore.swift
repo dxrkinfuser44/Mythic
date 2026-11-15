@@ -96,7 +96,44 @@ import OSLog
             }
         }
         
-        // TODO: others
-        // if storefronts.contains(...) { ... }
+        // steam
+        if storefronts.contains(.steam) {
+            do {
+                let installed = SteamClient.fetchInstalledGames()
+                let owned = try await SteamClient.fetchOwnedGames()
+
+                // add owned games that aren't installed
+                for game in owned where !installed.contains(where: { $0 == game }) {
+                    if let existing = library.first(where: { $0 == game }) {
+                        // previously installed, but no longer present on disk
+                        existing.installationState = .uninstalled
+                        library.update(with: existing)
+                    } else {
+                        library.update(with: game)
+                    }
+                }
+
+                // installed: merge instead of overwrite
+                for fetchedGame in installed {
+                    if let existing = library.first(where: { $0 == fetchedGame }) {
+                        // `merge` keeps the "greater" installation state, so apply the on-disk state explicitly.
+                        try existing.merge(with: fetchedGame, requiring: .identicalIgnoredKeys)
+                        existing.installationState = fetchedGame.installationState
+                        library.update(with: existing)
+                    } else {
+                        library.update(with: fetchedGame)
+                    }
+                }
+
+                // drop Steam games that are neither installed nor owned any more (uninstalled, signed out, or key removed)
+                let currentIDs = Set((installed + owned).map(\.id))
+                for game in library where game.storefront == .steam && !currentIDs.contains(game.id) {
+                    library.remove(game)
+                }
+            } catch {
+                log.error("Unable to refresh game data from Steam: \(error.localizedDescription)")
+                throw error
+            }
+        }
     }
 }
