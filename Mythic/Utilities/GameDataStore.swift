@@ -69,7 +69,8 @@ import OSLog
         
         // if variadics are empty, default to all cases
         let storefronts = storefronts.isEmpty ? Game.Storefront.allCases : storefronts as [Game.Storefront]
-        
+        var epicRefreshError: Error?
+
         // legendary (epic games)
         if storefronts.contains(.epicGames) {
             do {
@@ -90,9 +91,11 @@ import OSLog
                         library.update(with: fetchedGame)
                     }
                 }
+            } catch is Legendary.NotSignedInError where storefronts.contains(.steam) {
+                log.info("Skipping Epic Games refresh because the account is signed out.")
             } catch {
                 log.error("Unable to refresh game data from Epic Games: \(error.localizedDescription)")
-                throw error
+                epicRefreshError = error
             }
         }
         
@@ -100,7 +103,15 @@ import OSLog
         if storefronts.contains(.steam) {
             do {
                 let installed = SteamClient.fetchInstalledGames()
-                let owned = try await SteamClient.fetchOwnedGames()
+                let owned: [SteamGame]
+                let ownedFetchError: Error?
+                do {
+                    owned = try await SteamClient.fetchOwnedGames()
+                    ownedFetchError = nil
+                } catch {
+                    owned = []
+                    ownedFetchError = error
+                }
 
                 // add owned games that aren't installed
                 for game in owned where !installed.contains(where: { $0 == game }) {
@@ -125,6 +136,10 @@ import OSLog
                     }
                 }
 
+                if let ownedFetchError {
+                    throw ownedFetchError
+                }
+
                 // drop Steam games that are neither installed nor owned any more (uninstalled, signed out, or key removed)
                 let currentIDs = Set((installed + owned).map(\.id))
                 for game in library where game.storefront == .steam && !currentIDs.contains(game.id) {
@@ -134,6 +149,10 @@ import OSLog
                 log.error("Unable to refresh game data from Steam: \(error.localizedDescription)")
                 throw error
             }
+        }
+
+        if let epicRefreshError {
+            throw epicRefreshError
         }
     }
 }

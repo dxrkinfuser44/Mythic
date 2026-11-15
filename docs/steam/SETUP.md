@@ -34,4 +34,13 @@ Open `Mythic.xcodeproj`, resolve packages, build the `Mythic` scheme (Swift 6 mo
 * Install / launch / uninstall are handed to the Steam client via `steam://` URLs — the Steam client must be installed
   (natively, or inside a Mythic container for Windows-only titles).
 
+## 4. Checks on macOS
+
+* With Epic signed out, refresh the library and confirm installed Steam games appear.
+* With a Steam API key configured, interrupt the owned-games request and confirm installed Steam games still appear;
+  previously saved owned games should not be removed.
+* With Epic unavailable, confirm Steam install, update and verify actions remain available when otherwise applicable.
+  With only Windows Steam installed in the game's selected container, confirm an uninstalled Steam game's install
+  action opens that client.
+
 See `FUNCTION_MAP.md` for the API contract and `SECURITY_*.md` for audit results.
