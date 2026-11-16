@@ -12,11 +12,8 @@ import SwordRPC
 import WebKit
 
 struct StoreView: View {
-    private var canGoBack = false
-    private var canGoForward = false
+    @State private var navigator = WebViewNavigator()
     @State private var url: URL = .init(string: "https://store.epicgames.com/")!
-
-    @State private var refreshIconRotation: Angle = .degrees(0)
 
     @CodableAppStorage("epicGamesWebDataStore") var epicGamesWebDataStore: UUID = .init()
 
@@ -25,9 +22,15 @@ struct StoreView: View {
             url: url,
             datastore: .init(forIdentifier: epicGamesWebDataStore),
             error: .constant(nil),
-            canGoBack: canGoBack,
-            canGoForward: canGoForward
+            navigator: navigator
         )
+        .overlay(alignment: .top) {
+            if navigator.isLoading {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .accessibilityLabel(Text("Loading page"))
+            }
+        }
 
         .navigationTitle("Store")
 
@@ -38,56 +41,44 @@ struct StoreView: View {
                 presence.state = "Looking for games to purchase"
                 presence.timestamps.start = .now
                 presence.assets.largeImage = "macos_512x512_2x"
-                
+
                 return presence
             }())
         }
-        
+
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
+            ToolbarItemGroup(placement: .navigation) {
                 Button {
-                    if canGoBack {
-                        url = .init(string: "javascript:history.back();")!
-                    }
+                    navigator.goBack()
                 } label: {
-                    Image(systemName: "arrow.left")
-                        .symbolVariant(.circle)
+                    Label("Back", systemImage: "chevron.backward")
                 }
-                .disabled(!canGoBack)
+                .disabled(!navigator.canGoBack)
+                .help("Go back")
+
+                Button {
+                    navigator.goForward()
+                } label: {
+                    Label("Forward", systemImage: "chevron.forward")
+                }
+                .disabled(!navigator.canGoForward)
+                .help("Go forward")
             }
-            
-            ToolbarItem(placement: .confirmationAction) {
+
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button {
-                    if canGoForward {
-                        url = .init(string: "javascript:history.forward();")!
-                    }
+                    navigator.reload()
                 } label: {
-                    Image(systemName: "arrow.right")
-                        .symbolVariant(.circle)
+                    Label("Reload", systemImage: "arrow.clockwise")
                 }
-                .disabled(!canGoForward)
-            }
-            
-            ToolbarItem(placement: .confirmationAction) {
+                .help("Reload this page")
+
                 Button {
-                    url = .init(string: "javascript:location.reload();")!
-                    withAnimation(.default) {
-                        refreshIconRotation = .degrees(360)
-                    } completion: {
-                        refreshIconRotation = .degrees(0)
-                    }
+                    NSWorkspace.shared.open(navigator.currentURL ?? url)
                 } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .symbolVariant(.circle)
-                        .rotationEffect(refreshIconRotation)
+                    Label("Open in Browser", systemImage: "arrow.up.forward")
                 }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    NSWorkspace.shared.open(url)
-                } label: {
-                    Image(systemName: "arrow.up.forward")
-                }
+                .help("Open this page in your browser")
             }
         }
     }
