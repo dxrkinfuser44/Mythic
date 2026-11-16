@@ -46,8 +46,17 @@ struct EngineInstallationView: View { // similar to RosettaInstallationView
             
             if viewModel.currentStage != .installer && viewModel.currentStage != .finished {
                 // the if statement is a bit primitive, but functional.. the code at those stages are self-sufficient
-                Button("Next", systemImage: "arrow.right", action: { viewModel.stepStage() })
-                    .clipShape(.capsule)
+                HStack {
+                    // without this, the only way out of the disclaimer is to begin installing
+                    Button("Not Now", action: { isPresented = false })
+                        .clipShape(.capsule)
+                        .keyboardShortcut(.cancelAction)
+
+                    Button("Next", systemImage: "arrow.right", action: { viewModel.stepStage() })
+                        .clipShape(.capsule)
+                        .keyboardShortcut(.defaultAction)
+                }
+                .padding(.top)
             }
         }
     }
@@ -58,14 +67,15 @@ extension EngineInstallationView {
         var body: some View {
             Text(
                 """
-                In order to run Windows® games, Mythic must download
-                a specialized translation layer.
-                
-                The download time should take ~10 minutes,
-                with an average internet connection.
+                In order to run Windows® games, Mythic must download a specialized translation layer.
+
+                The download should take around 10 minutes with an average internet connection.
                 """
             )
             .multilineTextAlignment(.center)
+            // let the text wrap naturally, rather than at hard line breaks.
+            .frame(width: 380)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
     

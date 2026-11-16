@@ -43,9 +43,18 @@ struct RosettaInstallationView: View { // similar to EngineInstallationView
 
             if viewModel.currentStage != .installer && viewModel.currentStage != .finished {
                 // the if statement is a bit primitive, but functional.. the code at those stages are self-sufficient
-                Button("Next", systemImage: "arrow.right", action: { viewModel.stepStage() })
-                    .clipShape(.capsule)
-                    .disabled(!agreedToSLA)
+                HStack {
+                    // without this, the only way out of the disclaimer is to agree and begin installing
+                    Button("Not Now", action: { isPresented = false })
+                        .clipShape(.capsule)
+                        .keyboardShortcut(.cancelAction)
+
+                    Button("Next", systemImage: "arrow.right", action: { viewModel.stepStage() })
+                        .clipShape(.capsule)
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!agreedToSLA)
+                }
+                .padding(.top)
             }
         }
     }
@@ -91,7 +100,9 @@ extension RosettaInstallationView {
         @State private var isInstallationErrorAlertPresented: Bool = false
 
         var body: some View {
-            ProgressView(value: percentageCompletion, total: 100.0)
+            ProgressView(value: percentageCompletion, total: 100.0) {
+                Text("Installing Rosetta...")
+            }
                 .progressViewStyle(.linear)
                 .task {
                     guard !Rosetta.exists else {

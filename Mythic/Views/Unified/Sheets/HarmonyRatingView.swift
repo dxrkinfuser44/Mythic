@@ -63,6 +63,7 @@ struct HarmonyRatingView: View {
                 Button("Cancel", role: .cancel) {
                     isConfirmationPresented = true
                 }
+                .keyboardShortcut(.cancelAction)
                 .alert(isPresented: $isConfirmationPresented) {
                     Alert(
                         title: .init("Are you sure you want to proceed without rating?"),
@@ -87,6 +88,7 @@ struct HarmonyRatingView: View {
                         uploadCompatibilityData()
                     }
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                     .disabled(rating == nil)
                 }
             }

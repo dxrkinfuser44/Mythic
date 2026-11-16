@@ -60,6 +60,7 @@ struct EpicGamesGameInstallationView: View {
                     Text("Install \(game.description)")
                         .font(.title)
                         .bold()
+                        .multilineTextAlignment(.center)
 
                     if let storefront = game.storefront {
                         SubscriptedTextView(storefront.description)
@@ -109,6 +110,7 @@ struct EpicGamesGameInstallationView: View {
                                 Image(systemName: "exclamationmark.triangle")
                                     .symbolVariant(.fill)
                                     .help("Folder is not writable.")
+                                    .accessibilityLabel("Folder is not writable.")
                             }
 
                             // TODO: unify
@@ -161,6 +163,7 @@ struct EpicGamesGameInstallationView: View {
                 Button("Cancel") {
                     isPresented = false
                 }
+                .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
@@ -168,7 +171,9 @@ struct EpicGamesGameInstallationView: View {
                    let installSize = installSizeInBytes {
                     Text(ByteCountFormatter.string(fromByteCount: installSize, countStyle: .file))
                         .font(.footnote)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
+                        .help("Installation size")
+                        .accessibilityLabel("Installation size: \(ByteCountFormatter.string(fromByteCount: installSize, countStyle: .file))")
                         .onAppear {
                             if let availableSpace = availableSpaceInBytes,
                                let installSize = installSizeInBytes,
@@ -210,6 +215,7 @@ struct EpicGamesGameInstallationView: View {
                 .onChange(of: game, { spawnOptionalPacksFetchTask() })
                 .onChange(of: platform, { spawnOptionalPacksFetchTask() })
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
             .padding(.top)
         }

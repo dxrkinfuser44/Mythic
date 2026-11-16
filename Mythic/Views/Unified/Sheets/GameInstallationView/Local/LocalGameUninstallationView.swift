@@ -29,7 +29,7 @@ struct LocalGameUninstallationView: View {
                             }
                         }), isPresented: $isPresented,
             isImageEmpty: $isImageEmpty,
-            type: "Uninstall",
+            type: String(localized: "Uninstall"),
             operating: $isOperating,
             action: {
                 _ = try await LocalGameManager.uninstall(game: game,

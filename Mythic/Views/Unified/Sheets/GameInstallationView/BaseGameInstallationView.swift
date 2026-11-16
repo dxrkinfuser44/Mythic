@@ -32,6 +32,7 @@ struct BaseGameInstallationView<Content>: View where Content: View {
                     Text("\(type) \(game.description)")
                         .font(.title)
                         .bold()
+                        .multilineTextAlignment(.center)
 
                     if let storefront = game.storefront {
                         SubscriptedTextView(storefront.description)
@@ -45,6 +46,7 @@ struct BaseGameInstallationView<Content>: View where Content: View {
                 Button("Cancel") {
                     isPresented = false
                 }
+                .keyboardShortcut(.cancelAction)
 
                 Spacer()
 

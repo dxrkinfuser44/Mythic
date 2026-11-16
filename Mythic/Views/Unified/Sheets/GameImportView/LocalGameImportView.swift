@@ -85,6 +85,7 @@ struct LocalGameImportView: View {
                                 Image(systemName: "exclamationmark.triangle")
                                     .symbolVariant(.fill)
                                     .help("File/Folder is not readable by Mythic.")
+                                    .accessibilityLabel("File/Folder is not readable by Mythic.")
                             }
                             
                             Spacer()
@@ -124,9 +125,10 @@ struct LocalGameImportView: View {
                 Button("Cancel", role: .cancel) {
                     isPresented = false
                 }
-                
+                .keyboardShortcut(.cancelAction)
+
                 Spacer()
-                
+
                 Button("Done") {
                     // direct insertion into library is only necessary for
                     // non-storefront games (i.e., local).
@@ -137,6 +139,7 @@ struct LocalGameImportView: View {
                 .disabled(game.title.isEmpty)
                 .disabled(location == .temporaryDirectory)
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
             .padding([.horizontal, .bottom])
         }

@@ -54,9 +54,11 @@ struct SteamGameImportView: View {
             }
 
             HStack {
-                Button("Cancel", role: .cancel) {
+                // nothing here is pending, so this dismisses rather than cancels.
+                Button("Done", role: .cancel) {
                     isPresented = false
                 }
+                .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
@@ -75,6 +77,7 @@ struct SteamGameImportView: View {
                     if isRefreshing {
                         ProgressView()
                             .controlSize(.small)
+                            .accessibilityLabel("Refreshing Steam games")
                     } else {
                         Text("Refresh")
                     }

@@ -38,7 +38,14 @@ struct GameSettingsView: View {
                             .glur(radius: 18,
                                   offset: 0.6,
                                   interpolation: 0.6)
-                        
+                            // white text directly atop artwork is illegible on bright images.
+                            // (an overlay, so the scrim takes on the artwork's size.)
+                            .overlay {
+                                if !isImageEmpty {
+                                    ReadabilityScrim(startPoint: .center, endPoint: .bottom)
+                                }
+                            }
+
                         HStack {
                             if isImageEmpty && game.isFallbackImageAvailable {
                                 GameImageCard.FallbackGameImageCard(game: .constant(game))
@@ -112,26 +119,34 @@ struct GameSettingsView: View {
 
                                 Spacer()
                                 
-                                TextField("", text: Binding(
-                                    get: { typingArgument },
-                                    set: { newValue in
-                                        // reduce performance overhead by only allowing animations for the first two characters
-                                        if (0...1).contains(typingArgument.count) {
-                                            withAnimation {
+                                TextField(
+                                    text: Binding(
+                                        get: { typingArgument },
+                                        set: { newValue in
+                                            // reduce performance overhead by only allowing animations for the first two characters
+                                            if (0...1).contains(typingArgument.count) {
+                                                withAnimation {
+                                                    typingArgument = newValue
+                                                }
+                                            } else {
                                                 typingArgument = newValue
                                             }
-                                        } else {
-                                            typingArgument = newValue
                                         }
-                                    }
-                                ))
+                                    ),
+                                    prompt: Text("Add an argument")
+                                ) {
+                                    Text("New launch argument")
+                                }
+                                .labelsHidden()
                                 .onSubmit(submitLaunchArgument)
 
                                 if !typingArgument.isEmpty {
-                                    Button("", systemImage: "return") {
+                                    Button("Add Argument", systemImage: "return") {
                                         submitLaunchArgument()
                                     }
+                                    .labelStyle(.iconOnly)
                                     .buttonStyle(.plain)
+                                    .help("Add Argument")
                                 }
                             }
 
@@ -286,8 +301,10 @@ private extension GameSettingsView {
             
             Spacer()
 
+            // Esc closes; Return is left to the launch argument field.
             Button("Close") { isPresented = false }
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.cancelAction)
         }
         .padding()
     }
@@ -313,26 +330,36 @@ extension GameSettingsView {
         @State var isHoveringOverArgument: Bool = false
         
         var body: some View {
-            HStack {
-                Text(argument)
-                    .monospaced()
-                    .foregroundStyle(isHoveringOverArgument ? .red : .secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-            }
-            .background(in: .capsule)
-            .backgroundStyle(.quinary)
-            .onHover { hovering in
-                withAnimation { isHoveringOverArgument = hovering }
-            }
-            .onTapGesture {
+            // a real button (rather than a tap gesture), so it's reachable by keyboard and VoiceOver.
+            // the xmark states the action without relying on the hover colour.
+            Button {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     launchArguments.removeAll(where: { $0 == argument })
                     if launchArguments.isEmpty { // FIXME: for `.onChange` not firing when args become empty
                         game.launchArguments = .init()
                     }
                 }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(argument)
+                        .monospaced()
+
+                    Image(systemName: "xmark")
+                        .imageScale(.small)
+                }
+                .foregroundStyle(isHoveringOverArgument ? .red : .secondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(in: .capsule)
+                .backgroundStyle(.quinary)
+                .contentShape(.capsule)
             }
+            .buttonStyle(.plain)
+            .onHover { hovering in
+                withAnimation { isHoveringOverArgument = hovering }
+            }
+            .help("Remove \(argument)")
+            .accessibilityLabel("Remove \(argument)")
         }
     }
     
@@ -366,11 +393,13 @@ extension GameSettingsView {
                     
                     HStack {
                         Button("Close", action: { isPresented = false })
-                        
+                            .keyboardShortcut(.cancelAction)
+
                         Spacer()
-                        
+
                         Button("Done", action: { modifyThumbnailURL() })
                             .buttonStyle(.borderedProminent)
+                            .keyboardShortcut(.defaultAction)
                     }
                 }
             }

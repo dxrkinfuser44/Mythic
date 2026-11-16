@@ -63,6 +63,14 @@ struct EpicGamesGameImportView: View {
                         }
                     }
                     .onAppear(perform: { game = installableGames.first ?? game })
+
+                    // explain an empty picker, rather than leaving it unexplained
+                    if installableGames.isEmpty {
+                        Label("There are no uninstalled Epic Games titles in your library to import.",
+                              systemImage: "info.circle")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    }
                     
                     // FIXME: shared with EpicImport
                     Picker(
@@ -95,15 +103,16 @@ struct EpicGamesGameImportView: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Label("Location", systemImage: "folder")
-                            Text(enclosingDirectory?.prettyPath ?? "Unknown")
+                            Text(enclosingDirectory?.prettyPath ?? String(localized: "No folder selected"))
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         if let enclosingDirectory {
                             if !FileManager.default.isReadableFile(atPath: enclosingDirectory.path) {
                                 Image(systemName: "exclamationmark.triangle")
                                     .symbolVariant(.fill)
                                     .help("File/Folder is not readable by Mythic.")
+                                    .accessibilityLabel("File/Folder is not readable by Mythic.")
                             }
                         }
                         
@@ -132,7 +141,8 @@ struct EpicGamesGameImportView: View {
             
             HStack {
                 Button("Cancel", role: .cancel) { isPresented = false }
-                
+                    .keyboardShortcut(.cancelAction)
+
                 Spacer()
                 
                 OperationButton(
@@ -155,6 +165,7 @@ struct EpicGamesGameImportView: View {
                 .disabled(supportedPlatforms?.isEmpty == true)
                 .disabled(isOperating)
                 .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
             .padding([.horizontal, .bottom])
         }

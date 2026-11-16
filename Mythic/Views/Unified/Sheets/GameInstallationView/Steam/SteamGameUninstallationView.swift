@@ -23,7 +23,7 @@ struct SteamGameUninstallationView: View {
                         }),
             isPresented: $isPresented,
             isImageEmpty: $isImageEmpty,
-            type: "Uninstall",
+            type: String(localized: "Uninstall"),
             operating: $isOperating,
             action: {
                 _ = try await SteamGameManager.uninstall(game: game, persistFiles: false)

@@ -18,24 +18,46 @@ struct StarRatingView: View {
     var body: some View {
         HStack {
             ForEach(1..<6) { index in
-                Image(systemName: "star")
-                    .symbolVariant(hoveringOverIndex >= index ? .fill : .none)
-                    .shadow(color: .secondary, radius: hoveringOverIndex == index ? 10 : 0)
-                    .onHover { hovering in
-                        if isInteractive {
-                            withAnimation {
-                                hoveringOverIndex = hovering ? index : hoveringOverIndex
-                            }
+                // buttons (rather than tap gestures), so each star is reachable by keyboard
+                Button {
+                    if isInteractive {
+                        withAnimation {
+                            rating = index
+                            hoveringOverIndex = index
                         }
                     }
-                    .onTapGesture {
-                        if isInteractive {
-                            withAnimation {
-                                rating = index
-                            }
+                } label: {
+                    Image(systemName: "star")
+                        .symbolVariant(hoveringOverIndex >= index ? .fill : .none)
+                        .shadow(color: .secondary, radius: hoveringOverIndex == index ? 10 : 0)
+                }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    if isInteractive {
+                        withAnimation {
+                            hoveringOverIndex = hovering ? index : hoveringOverIndex
                         }
                     }
+                }
             }
+        }
+        // expose the five stars to VoiceOver as a single adjustable rating
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Rating")
+        .accessibilityValue("\(rating) out of 5 stars")
+        .accessibilityAdjustableAction { direction in
+            guard isInteractive else { return }
+
+            switch direction {
+            case .increment:
+                rating = min(rating + 1, 5)
+            case .decrement:
+                rating = max(rating - 1, 1)
+            @unknown default:
+                break
+            }
+
+            hoveringOverIndex = rating
         }
         .onAppear {
             withAnimation {

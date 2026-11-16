@@ -21,11 +21,11 @@ struct GameImportView: View {
                         EpicGamesGameImportView(isPresented: $isPresented)
                     }
                     
-                    Tab("Steam", systemImage: "storefront") {
+                    Tab("Steam", systemImage: "gamecontroller") {
                         SteamGameImportView(isPresented: $isPresented)
                     }
                     
-                    Tab("Local", systemImage: "storefront") {
+                    Tab("Local", systemImage: "internaldrive") {
                         LocalGameImportView(isPresented: $isPresented)
                     }
                 }
@@ -40,12 +40,12 @@ struct GameImportView: View {
 
                     SteamGameImportView(isPresented: $isPresented)
                         .tabItem {
-                            Label("Steam", systemImage: "storefront")
+                            Label("Steam", systemImage: "gamecontroller")
                         }
                     
                     LocalGameImportView(isPresented: $isPresented)
                         .tabItem {
-                            Label("Local", systemImage: "storefront")
+                            Label("Local", systemImage: "internaldrive")
                         }
                 }
                 .padding()

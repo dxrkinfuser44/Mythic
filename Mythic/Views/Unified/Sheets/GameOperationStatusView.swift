@@ -47,7 +47,8 @@ struct GameOperationStatusView: View {
                             
                             Spacer()
                             
-                            Text("(\(operation.progressKVOBridge.fileCompletedCount ?? 0)/\(operation.progressKVOBridge.fileTotalCount ?? 0))")
+                            Text("\(operation.progressKVOBridge.fileCompletedCount ?? 0) of \(operation.progressKVOBridge.fileTotalCount ?? 0)")
+                                .monospacedDigit()
                         }
                     }
 
@@ -82,9 +83,11 @@ struct GameOperationStatusView: View {
             HStack {
                 Button("Close", action: { isPresented = false })
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
             }
             .frame(maxWidth: 750)
         }
+        .frame(minWidth: 420)
     }
 }
 

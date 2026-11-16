@@ -28,7 +28,7 @@ struct EpicGamesGameUninstallationView: View {
                             }
                         }), isPresented: $isPresented,
             isImageEmpty: $isImageEmpty,
-            type: "Uninstall",
+            type: String(localized: "Uninstall"),
             operating: $isOperating,
             action: {
                 Task(priority: .userInitiated) { @MainActor [game] in

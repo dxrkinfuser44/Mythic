@@ -51,11 +51,13 @@ struct HomeView: View {
                                     view
                                 }
                             }
-
-                        // white text directly atop artwork is illegible on bright images
-                        if !isImageEmpty {
-                            ReadabilityScrim(startPoint: .center, endPoint: .bottom)
-                        }
+                            // white text directly atop artwork is illegible on bright images.
+                            // (an overlay, so the scrim takes on the artwork's size.)
+                            .overlay {
+                                if !isImageEmpty {
+                                    ReadabilityScrim(startPoint: .center, endPoint: .bottom)
+                                }
+                            }
 
                         HStack {
                             if isImageEmpty, recentGame.isFallbackImageAvailable {
