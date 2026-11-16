@@ -26,6 +26,7 @@ extension SparkleUpdater {
                     Button("Cancel") {
                         cancel()
                     }
+                    .keyboardShortcut(.cancelAction)
                 }
             )
         }

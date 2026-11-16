@@ -58,13 +58,14 @@ extension SparkleUpdater {
                     Button("Cancel") {
                         cancel()
                     }
+                    .keyboardShortcut(.cancelAction)
                 }
             )
             .onReceive(timer) { _ in
                 withAnimation {
                     downloaded = bytesDownloaded
                     
-                    let timeElapsed: TimeInterval = .init() - downloadStartTimestamp.timeIntervalSinceReferenceDate
+                    let timeElapsed: TimeInterval = Date().timeIntervalSince(downloadStartTimestamp)
                     
                     if timeElapsed > 6 && bytesDownloaded > 0 {
                         let bytesRemaining: Double = .init(bytesTotal - bytesDownloaded)

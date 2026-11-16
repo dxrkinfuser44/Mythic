@@ -31,6 +31,7 @@ extension SparkleUpdater {
                             dismiss(true)
                         }
                         .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
                     }
                 }
             )
