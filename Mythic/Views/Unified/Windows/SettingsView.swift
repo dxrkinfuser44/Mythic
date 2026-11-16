@@ -68,18 +68,41 @@ struct SettingsView: View {
                 }
                 .tabViewStyle(.automatic)
             } else { // macOS 15 unavailable ↓
-                Form {
-                    Section("General", content: { GeneralView() })
-                    Section("Views", content: { ViewSettingsView() })
-                    Section("Launching", content: { LaunchingView() })
-                    Section("Operations", content: { OperationsView() })
-                    Section("Updates", content: { UpdatesView() })
-                    Section("Services", content: { ServicesView() })
-                    Section("Engine", content: { EngineView() })
+                // the same toolbar tabs (and names) as above, rather than one long form.
+                TabView {
+                    Form { GeneralView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("General", systemImage: "gear") }
+
+                    Form { ViewSettingsView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("Views", systemImage: "document.viewfinder") }
+
+                    Form { LaunchingView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("Launching", systemImage: "play") }
+
+                    Form { OperationsView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("Downloads", systemImage: "arrow.down.to.line") }
+
+                    Form { UpdatesView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("Updates", systemImage: "arrow.down.app") }
+
+                    Form { ServicesView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("Services", systemImage: "app.connected.to.app.below.fill") }
+
+                    Form { EngineView() }
+                        .formStyle(.grouped)
+                        .tabItem { Label("Engine", systemImage: "gamecontroller.circle") }
                 }
-                .formStyle(.grouped)
             }
         }
+        // a fixed width stops the window from resizing as tabs change.
+        .frame(width: 600)
+        .frame(minHeight: 380)
         .task(priority: .background) {
             discordRPC.setPresence({
                 var presence: RichPresence = .init()
@@ -107,7 +130,7 @@ extension SettingsView {
                 "Reset Mythic?",
                 isPresented: $isResetAlertPresented,
                 actions: {
-                    Button("OK", role: .destructive) {
+                    Button("Reset Mythic", role: .destructive) {
                         if let bundleIdentifier = Bundle.main.bundleIdentifier {
                             UserDefaults.standard.removePersistentDomain(forName: bundleIdentifier)
                         }
@@ -135,7 +158,7 @@ extension SettingsView {
                 "Reset Mythic Settings?",
                 isPresented: $isResetSettingsAlertPresented,
                 actions: {
-                    Button("OK", role: .destructive) {
+                    Button("Reset Settings", role: .destructive) {
                         if let bundleIdentifier = Bundle.main.bundleIdentifier {
                             UserDefaults.standard.removePersistentDomain(forName: bundleIdentifier)
                         }
@@ -203,6 +226,7 @@ extension SettingsView {
                             Image(systemName: "exclamationmark.triangle")
                                 .symbolVariant(.fill)
                                 .help("Folder is not writable.")
+                                .accessibilityLabel("Folder is not writable.")
                         }
                     }
                 }
@@ -232,7 +256,6 @@ extension SettingsView {
     }
 
     struct UpdatesView: View {
-        @State private var isMythicUpdatesSectionExpanded: Bool = true
         @State private var isEngineUpdatesSectionExpanded: Bool = true
 
         @AppStorage("engineChannel") private var engineChannel: String = Engine.ReleaseChannel.stable.rawValue
@@ -245,7 +268,7 @@ extension SettingsView {
         @AppStorage("engineAutomaticallyChecksForUpdates") private var engineAutomaticallyChecksForUpdates: Bool = true
 
         var body: some View {
-            Section("Mythic", isExpanded: $isMythicUpdatesSectionExpanded) {
+            // TODO: Mythic's own update toggles; their (otherwise empty) section is omitted until then.
 //                Toggle(
 //                    "Automatically check for Mythic updates",
 //                    systemImage: "arrow.down.app.dashed",
@@ -263,7 +286,6 @@ extension SettingsView {
 //                        set: { sparkleController.updater.automaticallyDownloadsUpdates = $0 }
 //                    )
 //                )
-            }
 
             Section("Mythic Engine", isExpanded: $isEngineUpdatesSectionExpanded) {
                 Picker("Release Channel", systemImage: "app.badge.clock", selection: $engineChannel) {
@@ -288,7 +310,7 @@ extension SettingsView {
                     "Would you like to reinstall Mythic Engine?",
                     isPresented: $isEngineChannelChangeAlertPresented,
                     actions: {
-                        Button("OK", role: .destructive) {
+                        Button("Reinstall", role: .destructive) {
                             Task { @MainActor in
                                 try? await Engine.remove()
                                 isEngineInstallationViewPresented = true
@@ -412,6 +434,7 @@ extension SettingsView {
                     if isRefreshingSteamLibrary {
                         ProgressView()
                             .controlSize(.small)
+                            .accessibilityLabel(String(localized: "Refreshing Steam library"))
                     } else {
                         Text(String(localized: "Refresh Steam library"))
                     }
