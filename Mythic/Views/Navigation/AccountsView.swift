@@ -25,7 +25,7 @@ struct AccountsView: View {
 
     var body: some View {
         ScrollView {
-            HStack {
+            VStack(alignment: .leading, spacing: 12) {
                 AccountCard(
                     signedInUser: .constant(try? Legendary.retrieveUser()),
                     image: Image("EGFaceless"),
@@ -40,6 +40,7 @@ struct AccountsView: View {
                     }
                 )
                 .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
                         .fill(.quinary)
@@ -53,23 +54,6 @@ struct AccountsView: View {
                             do {
                                 try await Legendary.signOut()
                                 isEpicAccountCardRefreshed.toggle()
-                                // FIXME: no way to propogate error
-                                // below is the code to do it
-                                /*
-                                .alert(
-                                    "Unable to sign out of Epic Games.",
-                                    isPresented: $isEpicSignOutErrorAlertPresented,
-                                    presenting: epicSignOutError
-                                ) { _ in
-                                    Button(role: .close) {
-
-                                    } label: {
-                                        Text("OK")
-                                    }
-                                } message: { error in
-                                    Text(error.localizedDescription)
-                                }
-                                */
                             } catch {
                                 epicSignOutError = error
                                 isEpicSignOutErrorAlertPresented = true
@@ -95,6 +79,7 @@ struct AccountsView: View {
                     }
                 )
                 .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
                         .fill(.quinary)
@@ -129,6 +114,8 @@ struct AccountsView: View {
                     } label: {
                         Text("Sign Out")
                     }
+
+                    Button(String(localized: "Cancel"), role: .cancel) { }
                 }
                 .task {
                     guard let steamID = SteamAuth.currentSteamID else {
@@ -141,6 +128,17 @@ struct AccountsView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .alert(
+                "Unable to sign out of Epic Games.",
+                isPresented: $isEpicSignOutErrorAlertPresented,
+                presenting: epicSignOutError
+            ) { _ in
+                Button(String(localized: "OK"), role: .cancel) { }
+            } message: { error in
+                Text(error.localizedDescription)
+            }
         }
         .alert(
             String(localized: "Unable to refresh your Steam account."),
@@ -151,8 +149,6 @@ struct AccountsView: View {
         } message: { error in
             Text(error.localizedDescription)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
         .navigationTitle("Accounts")
         .task(priority: .background) {
             discordRPC.setPresence({
@@ -177,55 +173,32 @@ extension AccountsView {
         var signInAction: () -> Void
         var signOutAction: () -> Void
 
-        @State private var isHoveringOverSignOutButton: Bool = false
-        // @State private var isSignOutConfirmationAlertPresented: Bool = false
-
         var body: some View {
-            HStack {
+            HStack(spacing: 12) {
                 image
                     .resizable()
                     .aspectRatio(1, contentMode: .fit)
                     .frame(width: 60)
+                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading) {
                     Text(storefront.description)
                         .font(.title.bold())
 
                     Text(signedInUser != nil ? "Signed in as \"\(signedInUser ?? "Unknown")\"" : "Not signed in")
+                        .foregroundStyle(.secondary)
                 }
 
-                Group {
-                    if signedInUser != nil {
-                        Button("Sign Out", systemImage: "person.slash", action: signOutAction)
-                            .onHover { hovering in
-                                withAnimation {
-                                    isHoveringOverSignOutButton = hovering
-                                }
-                            }
-                            .conditionalTransform(if: isHoveringOverSignOutButton) { view in
-                                view
-                                    .foregroundStyle(.red)
-                            }
-                        /* FIXME: ☹️☹️ swiftui will not let me do this, stupid hierarchy stupid swiftui rules
-                         FIXME: for now, it's called in AccountsView
-                            .alert(
-                                "Are you sure you want to sign out of Epic Games?",
-                                isPresented: $isEpicSignOutConfirmationAlertPresented
-                            ) {
-                                Button(role: .destructive) {
-                                    signOutAction()
-                                } label: {
-                                    Text("Sign Out")
-                                }
-                            }
-                         */
-                    } else {
-                        Button("Sign In", systemImage: "person", action: signInAction)
-                    }
+                Spacer(minLength: 12)
+
+                // the confirmation alerts are presented by AccountsView.
+                if signedInUser != nil {
+                    Button("Sign Out", systemImage: "person.slash", role: .destructive, action: signOutAction)
+                } else {
+                    Button("Sign In", systemImage: "person", action: signInAction)
                 }
-                .clipShape(.capsule)
-                .padding(.leading)
             }
+            .accessibilityElement(children: .contain)
         }
     }
 }
