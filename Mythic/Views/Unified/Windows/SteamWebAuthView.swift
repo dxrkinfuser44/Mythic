@@ -17,30 +17,61 @@ struct SteamWebAuthView: View {
     @State private var isVerifying = false
 
     var body: some View {
-        Group {
-            if let nonce {
-                VStack(spacing: 0) {
-                    SteamAuthWebView(
-                        nonce: nonce,
-                        isPresented: $isPresented,
-                        isVerifying: $isVerifying,
-                        onSignedIn: onSignedIn,
-                        onError: { error = $0 }
-                    )
-                    if let error {
-                        Text(error.localizedDescription)
-                            .foregroundStyle(.red)
-                            .padding()
-                    }
+        VStack(spacing: 0) {
+            HStack {
+                Text("Sign in to Steam")
+                    .font(.headline)
+
+                Spacer()
+
+                Button(String(localized: "Cancel"), role: .cancel) {
+                    isPresented = false
                 }
-            } else if let error {
-                Text(error.localizedDescription)
-                    .foregroundStyle(.secondary)
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding()
+
+            Divider()
+
+            Group {
+                if let nonce {
+                    VStack(spacing: 0) {
+                        SteamAuthWebView(
+                            nonce: nonce,
+                            isPresented: $isPresented,
+                            isVerifying: $isVerifying,
+                            onSignedIn: onSignedIn,
+                            onError: { error = $0 }
+                        )
+                        if let error {
+                            Divider()
+
+                            Label {
+                                Text(error.localizedDescription)
+                            } icon: {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.yellow)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                        }
+                    }
+                } else if let error {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.largeTitle)
+                            .foregroundStyle(.yellow)
+                            .accessibilityHidden(true)
+
+                        Text(error.localizedDescription)
+                            .multilineTextAlignment(.center)
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding()
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
         }
         .overlay {
