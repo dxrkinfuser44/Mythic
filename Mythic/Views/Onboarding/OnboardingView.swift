@@ -23,16 +23,22 @@ struct OnboardingView: View {
     @State private var colorfulViewColors: [Color] = [
         .init(hex: "#7541FF"),
         .init(hex: "#5412FF"),
-        Color(nsColor: .windowBackgroundColor)
+        .init(hex: "#1B1233") // dark, so the white text keeps its contrast in light mode too
     ]
     @State private var onboardingError: Error?
 
-    @State private var isHoveringOverProgressView: Bool = false
+    private var currentStepNumber: Int {
+        (viewModel.stages.firstIndex(of: viewModel.currentStage) ?? 0) + 1
+    }
+
+    private var progressAccessibilityLabel: String {
+        String(localized: "Step \(currentStepNumber) of \(viewModel.stages.count): \(viewModel.currentStage.rawValue)")
+    }
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                VStack {
+                VStack(spacing: 4) {
                     HStack {
                         ForEach(viewModel.stages) { stage in
                             if viewModel.currentStage > stage {
@@ -48,18 +54,13 @@ struct OnboardingView: View {
                         }
                     }
                     .padding(.top)
-                    .onHover { hovering in
-                        withAnimation {
-                            isHoveringOverProgressView = hovering
-                        }
-                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(progressAccessibilityLabel)
 
-                    if isHoveringOverProgressView {
-                        Text("\(viewModel.fractionCompleted.formatted(.percent.precision(.fractionLength(0)))) complete")
-                            .textCase(.uppercase)
-                            .foregroundStyle(.secondary)
-                            .font(.footnote)
-                    }
+                    Text("Step \(currentStepNumber) of \(viewModel.stages.count) · \(viewModel.fractionCompleted.formatted(.percent.precision(.fractionLength(0)))) complete")
+                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.footnote)
+                        .accessibilityHidden(true) // already covered by the progress label above
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
 
@@ -131,6 +132,7 @@ struct OnboardingView: View {
                             if onboardingError != nil {
                                 Button(String(describing: "Restart"), systemImage: "arrow.trianglehead.clockwise", action: { viewModel.reset() })
                                     .clipShape(.capsule)
+                                    .keyboardShortcut(.defaultAction)
                             } else {
                                 Button("Next", systemImage: "arrow.right") {
                                     if viewModel.currentStage < .finished {
@@ -142,6 +144,7 @@ struct OnboardingView: View {
                                     }
                                 }
                                 .clipShape(.capsule)
+                                .keyboardShortcut(.defaultAction)
                             }
                         }
                     }
@@ -167,7 +170,7 @@ struct OnboardingView: View {
 
                     Text("(this software is currently in its alpha stage.)")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.85))
                 }
                 .frame(maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom)
@@ -179,6 +182,7 @@ struct OnboardingView: View {
             )
         }
         .foregroundStyle(.white)
+        .environment(\.colorScheme, .dark) // controls sit on the dark gradient, so render them for dark
         .navigationTitle("Mythic Setup")
         .task(priority: .background) {
             discordRPC.setPresence({
