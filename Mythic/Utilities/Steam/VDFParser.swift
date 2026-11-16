@@ -66,8 +66,25 @@ enum VDF {
     }
 
     static func parse(contentsOf url: URL) throws -> Node {
-        let handle = try FileHandle(forReadingFrom: url)
+        // Only read regular files. A planted FIFO (or a symlink to one, or to a device such as /dev/tty) named
+        // `appmanifest_<id>.acf` / `libraryfolders.vdf` would otherwise block `open`/`read` forever on the caller's
+        // thread. O_NONBLOCK keeps `open` from waiting on a FIFO; checking the type with `fstat` on the already-opened
+        // descriptor avoids a check-then-open race.
+        let descriptor = url.withUnsafeFileSystemRepresentation { path -> Int32 in
+            guard let path else { return -1 }
+            return open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC)
+        }
+        guard descriptor >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
         defer { try? handle.close() }
+
+        var status = stat()
+        guard fstat(descriptor, &status) == 0,
+              (status.st_mode & S_IFMT) == S_IFREG else {
+            throw ParseError(message: "VDF path is not a regular file", offset: 0)
+        }
 
         var data = Data()
         while data.count <= maximumFileSize {
@@ -101,7 +118,7 @@ enum VDF {
 
             if character == "/", index + 1 < characters.count, characters[index + 1] == "/" {
                 index += 2
-                while index < characters.count, characters[index] != "\n" {
+                while index < characters.count, !characters[index].isNewline { // "\r\n" is one Character
                     index += 1
                 }
                 continue
@@ -215,7 +232,7 @@ enum VDF {
                 }
                 index += 1
                 guard index < tokens.count else {
-                    throw error("Expected a value for key \"\(key)\"", at: keyOffset)
+                    throw error("Expected a value for a key", at: keyOffset)
                 }
 
                 switch tokens[index] {
@@ -231,7 +248,7 @@ enum VDF {
                     let object = try parseObject(depth: depth + 1, closingBraceExpected: true)
                     children.append((key: key, value: object))
                 case .closeBrace(let offset):
-                    throw error("Expected a value for key \"\(key)\"", at: offset)
+                    throw error("Expected a value for a key", at: offset)
                 }
             }
 

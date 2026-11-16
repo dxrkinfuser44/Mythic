@@ -39,6 +39,28 @@ enum SteamClient {
         return gameIDPrefix + appID
     }
 
+    static let maximumTitleLength = 256
+
+    /// Cleans an untrusted Steam-supplied display string (manifest `name`, Web API game `name`, persona name):
+    /// control characters and line/paragraph separators become spaces, format characters (bidi overrides such as
+    /// U+202E, zero-width characters) are dropped, and the result is trimmed and capped. `nil` if nothing is left.
+    static func sanitizedTitle(_ raw: String) -> String? {
+        var scalars = String.UnicodeScalarView()
+        for scalar in raw.unicodeScalars {
+            switch scalar.properties.generalCategory {
+            case .control, .lineSeparator, .paragraphSeparator:
+                scalars.append(" ")
+            case .format, .surrogate:
+                continue
+            default:
+                scalars.append(scalar)
+            }
+        }
+        let title = String(scalars).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return nil }
+        return String(title.prefix(maximumTitleLength))
+    }
+
     static var isNativeClientInstalled: Bool {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: clientBundleIdentifier) != nil
     }
@@ -190,8 +212,17 @@ enum SteamClient {
 
         switch platform {
         case .macOS:
-            guard isNativeClientInstalled,
-                  NSWorkspace.shared.open(url) else {
+            // Hand the URL to Valve's Steam app explicitly rather than to whichever app currently claims the `steam:`
+            // scheme (any installed app can register it and would otherwise receive these actions).
+            guard let steamAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: clientBundleIdentifier) else {
+                throw ClientNotInstalledError()
+            }
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            do {
+                _ = try await NSWorkspace.shared.open([url], withApplicationAt: steamAppURL, configuration: configuration)
+            } catch {
+                log.error("Unable to hand \(action, privacy: .public) to the Steam client: \(error.localizedDescription)")
                 throw ClientNotInstalledError()
             }
         case .windows:
@@ -220,7 +251,7 @@ enum SteamClient {
     }
 
     static func fetchInstalledGames() -> [SteamGame] {
-        installedApps().compactMap { app in
+        installedApps(forceRefresh: true).compactMap { app in
             guard let gameID = gameID(forAppID: app.appID) else { return nil }
             return SteamGame(
                 id: gameID,
@@ -232,10 +263,11 @@ enum SteamClient {
     }
 
     /// Main-actor isolated so the non-Sendable `SteamGame` results never cross an isolation boundary (Swift 6).
-    @MainActor static func fetchOwnedGames() async throws -> [SteamGame] {
+    @MainActor static func fetchOwnedGames() async throws -> [SteamGame]? {
         guard let steamID = SteamAuth.currentSteamID,
               SteamConfig.webAPIKey != nil else {
-            return []
+            log.debug("Skipping owned-games refresh because Steam sign-in or a Web API key is unavailable.")
+            return nil
         }
 
         let ownedGames = try await SteamWebAPI.getOwnedGames(steamID: steamID)
@@ -244,7 +276,7 @@ enum SteamClient {
             guard let gameID = gameID(forAppID: appID) else { return nil }
             return SteamGame(
                 id: gameID,
-                title: ownedGame.name ?? String(localized: "Steam App \(appID)"),
+                title: ownedGame.name.flatMap { sanitizedTitle($0) } ?? String(localized: "Steam App \(appID)"),
                 installationState: .uninstalled
             )
         }
@@ -294,8 +326,8 @@ enum SteamClient {
               let installDirectoryName = state["installdir"]?.stringValue,
               let installDirectory = safeInstallDirectory(installDirectoryName, steamApps: steamApps),
               isDirectory(installDirectory),
-              let name = state["name"]?.stringValue,
-              !name.isEmpty else {
+              let rawName = state["name"]?.stringValue,
+              let name = sanitizedTitle(rawName) else {
             return nil
         }
 

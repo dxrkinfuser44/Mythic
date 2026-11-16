@@ -69,7 +69,8 @@ import OSLog
         
         // if variadics are empty, default to all cases
         let storefronts = storefronts.isEmpty ? Game.Storefront.allCases : storefronts as [Game.Storefront]
-        
+        var epicRefreshError: Error?
+
         // legendary (epic games)
         if storefronts.contains(.epicGames) {
             do {
@@ -90,9 +91,11 @@ import OSLog
                         library.update(with: fetchedGame)
                     }
                 }
+            } catch is Legendary.NotSignedInError where storefronts.contains(.steam) {
+                log.info("Skipping Epic Games refresh because the account is signed out.")
             } catch {
                 log.error("Unable to refresh game data from Epic Games: \(error.localizedDescription)")
-                throw error
+                epicRefreshError = error
             }
         }
         
@@ -100,10 +103,18 @@ import OSLog
         if storefronts.contains(.steam) {
             do {
                 let installed = SteamClient.fetchInstalledGames()
-                let owned = try await SteamClient.fetchOwnedGames()
+                let owned: [SteamGame]?
+                let ownedFetchError: Error?
+                do {
+                    owned = try await SteamClient.fetchOwnedGames()
+                    ownedFetchError = nil
+                } catch {
+                    owned = nil
+                    ownedFetchError = error
+                }
 
                 // add owned games that aren't installed
-                for game in owned where !installed.contains(where: { $0 == game }) {
+                for game in owned ?? [] where !installed.contains(where: { $0 == game }) {
                     if let existing = library.first(where: { $0 == game }) {
                         // previously installed, but no longer present on disk
                         existing.installationState = .uninstalled
@@ -125,15 +136,25 @@ import OSLog
                     }
                 }
 
-                // drop Steam games that are neither installed nor owned any more (uninstalled, signed out, or key removed)
-                let currentIDs = Set((installed + owned).map(\.id))
-                for game in library where game.storefront == .steam && !currentIDs.contains(game.id) {
-                    library.remove(game)
+                if let ownedFetchError {
+                    throw ownedFetchError
+                }
+
+                // Only prune when Steam returned a complete owned-games list.
+                if let owned {
+                    let currentIDs = Set((installed + owned).map(\.id))
+                    for game in library where game.storefront == .steam && !currentIDs.contains(game.id) {
+                        library.remove(game)
+                    }
                 }
             } catch {
                 log.error("Unable to refresh game data from Steam: \(error.localizedDescription)")
                 throw error
             }
+        }
+
+        if let epicRefreshError {
+            throw epicRefreshError
         }
     }
 }

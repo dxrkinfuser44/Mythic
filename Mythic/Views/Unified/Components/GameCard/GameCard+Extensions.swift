@@ -106,21 +106,20 @@ extension GameCard {
                 @State private var isInstallSheetPresented = false
                 @State private var installError: Error?
                 @State private var isInstallErrorAlertPresented = false
+                @State private var isSteamClientSelectionPresented = false
+                @State private var hasNativeSteam = false
+                @State private var steamContainers: [URL] = []
 
                 var body: some View {
                     Button {
-                        if let steamGame = game as? SteamGame {
-                            Task {
-                                do {
-                                    _ = try await SteamGameManager.install(
-                                        game: steamGame,
-                                        platform: steamGame.getSupportedPlatforms()?.first ?? .macOS,
-                                        qualityOfService: .userInitiated
-                                    )
-                                } catch {
-                                    installError = error
-                                    isInstallErrorAlertPresented = true
-                                }
+                        if game is SteamGame {
+                            hasNativeSteam = SteamClient.isNativeClientInstalled
+                            steamContainers = SteamClient.installLocations.compactMap(\.containerURL)
+                            if hasNativeSteam || !steamContainers.isEmpty {
+                                isSteamClientSelectionPresented = true
+                            } else {
+                                installError = SteamClient.ClientNotInstalledError()
+                                isInstallErrorAlertPresented = true
                             }
                         } else {
                             isInstallSheetPresented = true
@@ -134,12 +133,30 @@ extension GameCard {
                                 .padding(2)
                         }
                     }
-                    .disabled(networkMonitor.epicAccessibilityState != .accessible)
+                    .disabled(game.storefront != .steam && networkMonitor.epicAccessibilityState != .accessible)
                     .disabled(game.storefront == .local)
                     .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .install }))
                     .help("Install \(game.description)")
                     .accessibilityLabel("Install \(game.description)")
 
+                    .confirmationDialog("Choose a Steam client",
+                                        isPresented: $isSteamClientSelectionPresented) {
+                        if let steamGame = game as? SteamGame {
+                            if hasNativeSteam {
+                                Button("macOS Steam") {
+                                    installSteamGame(steamGame, platform: .macOS)
+                                }
+                            }
+                            ForEach(steamContainers, id: \.self) { containerURL in
+                                Button("Windows Steam — \(containerURL.prettyPath)") {
+                                    installSteamGame(steamGame, platform: .windows, containerURL: containerURL)
+                                }
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text("Choose where to install \(game.title). Steam will handle the installation.")
+                    }
                     .alert("Unable to install \"\(game.title)\".",
                            isPresented: $isInstallErrorAlertPresented,
                            presenting: installError) { _ in
@@ -162,6 +179,22 @@ extension GameCard {
                             .padding()
                             .frame(width: 700, height: 380)
                         default: EmptyView()
+                        }
+                    }
+                }
+
+                private func installSteamGame(_ steamGame: SteamGame, platform: Game.Platform, containerURL: URL? = nil) {
+                    Task {
+                        do {
+                            _ = try await SteamGameManager.install(
+                                game: steamGame,
+                                platform: platform,
+                                containerURL: containerURL,
+                                qualityOfService: .userInitiated
+                            )
+                        } catch {
+                            installError = error
+                            isInstallErrorAlertPresented = true
                         }
                     }
                 }
@@ -197,7 +230,7 @@ extension GameCard {
                             .padding(2)
                     }
                 }
-                .disabled(networkMonitor.epicAccessibilityState != .accessible)
+                .disabled(game.storefront != .steam && networkMonitor.epicAccessibilityState != .accessible)
                 .disabled(game.storefront == .local)
                 .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .repair }))
                 .alert("Unable to verify installation.",
@@ -241,7 +274,7 @@ extension GameCard {
                             .padding(2)
                     }
                 }
-                .disabled(networkMonitor.epicAccessibilityState != .accessible)
+                .disabled(game.storefront != .steam && networkMonitor.epicAccessibilityState != .accessible)
                 // FIXME: .disabled(game.checkIfGameIsRunning())
                 .disabled(game.isUpdateAvailable != true)
                 .disabled(operationManager.queue.contains(where: { $0.game == game && $0.type == .update }))
