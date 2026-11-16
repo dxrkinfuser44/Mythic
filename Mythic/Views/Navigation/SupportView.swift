@@ -14,61 +14,48 @@ import SwordRPC
 struct SupportView: View {
 
     var body: some View {
-        Text("Support")
-            .font(.title)
-            .fontWeight(.bold)
-            .frame(maxWidth: 400, alignment: .leading)
-            .padding(.leading)
-
-        Spacer()
-
-        VStack {
-            Text("Resources")
-                .font(.title2)
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Support")
+                .font(.title)
                 .fontWeight(.bold)
-                .frame(maxWidth: 400, alignment: .leading)
-            HStack{
-                Button("Documentation"){
-                    openLink(urlString: "https://docs.getmythic.app/")
+                .padding(.horizontal)
+
+            Form {
+                Section("Resources") {
+                    Link(destination: URL(string: "https://docs.getmythic.app/")!) {
+                        Label("Documentation", systemImage: "book")
+                    }
+
+                    Link(destination: URL(string: "https://getmythic.app/faq/")!) {
+                        Label("FAQ", systemImage: "questionmark.circle")
+                    }
+
+                    Link(destination: URL(string: "https://docs.google.com/spreadsheets/d/1W_1UexC1VOcbP2CHhoZBR5-8koH-ZPxJBDWntwH-tsc/")!) {
+                        Label("Compatibility List", systemImage: "list.bullet")
+                    }
                 }
-                verticalDivider(height: 30)
-                Button("FAQ"){
-                    openLink(urlString: "https://getmythic.app/faq/")
-                }
-                verticalDivider(height: 30)
-                Button("Compatibility List"){
-                    openLink(urlString: "https://docs.google.com/spreadsheets/d/1W_1UexC1VOcbP2CHhoZBR5-8koH-ZPxJBDWntwH-tsc/")
+
+                Section {
+                    Link(destination: URL(string: "https://github.com/MythicApp/Mythic/issues")!) {
+                        Label("Report an issue", systemImage: "exclamationmark.bubble")
+                    }
+
+                    Link(destination: URL(string: "https://discord.gg/kQKdvjTVqh")!) {
+                        Label("Create a support ticket", systemImage: "bubble.left.and.bubble.right")
+                    }
+                } header: {
+                    Text("Receive Help")
+                } footer: {
+                    Text("Please consult resources before creating an issue — you may find a solution there.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .padding(.bottom)
-            .frame(maxWidth: 400, alignment: .leading)
-
-            Text("Recieve Help")
-                .font(.title2)
-                .fontWeight(.bold)
-                .frame(maxWidth: 400, alignment: .leading)
-            HStack{
-                Button("Report an issue"){
-                    openLink(urlString: "https://github.com/MythicApp/Mythic/issues")
-                }
-                verticalDivider(height: 30)
-                Button("Create a support ticket"){
-                    openLink(urlString: "https://discord.gg/kQKdvjTVqh")
-                }
-            }
-            .frame(maxWidth: 400, alignment: .leading)
+            .formStyle(.grouped)
+            // keep the window's own material visible behind the form
+            .scrollContentBackground(.hidden)
         }
-        .padding([.leading, .bottom])
-        .frame(maxWidth: 400, alignment: .leading)
-
-        Spacer()
-
-        VStack{
-            Label("Please consult resources before creating an issue — you may find a solution there.", systemImage: "exclamationmark.bubble")
-                .font(.footnote)
-                .frame(maxWidth: 400, alignment: .leading)
-                .padding([.leading, .bottom])
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task(priority: .background) {
             // Set rich presence using SwordRPC
             discordRPC.setPresence({
@@ -92,7 +79,7 @@ public class SupportWindowController: NSWindowController {
         let hosting = NSHostingController(rootView: supportView)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
             styleMask: [
                 .titled,
                 .closable,
@@ -141,18 +128,6 @@ public class SupportWindowController: NSWindowController {
             NSApp.activate(ignoringOtherApps: true)
         }
     }
-}
-
-private func openLink(urlString: String) {
-    if let url = URL(string: urlString) {
-        NSWorkspace.shared.open(url)
-    }
-}
-
-@ViewBuilder
-private func verticalDivider(height: CGFloat) -> some View {
-    Divider()
-        .frame(width: 1, height: height)
 }
 
 #Preview {

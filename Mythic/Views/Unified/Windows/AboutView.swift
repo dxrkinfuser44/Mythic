@@ -22,10 +22,12 @@ struct AboutView: View {
     @State private var colorfulAnimationNoise: Double = 0
     
     @State private var showGradientView: Bool = false
-    @State private var animateTextView: Bool = false
     @State private var isChevronHovered: Bool = false
 
     @State private var engineVersion: SemanticVersion?
+
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -35,43 +37,40 @@ struct AboutView: View {
                         BundleIconView()
                             .frame(width: 100, height: 100)
                         
-                        if !animateTextView {
-                            Group {
-                                Text("Mythic")
-                                    .font(.largeTitle)
-                                Text("© by vapidinfinity ✦")
-                                
-                                Divider()
-                                    .frame(width: 100)
-                                
-                                VStack {
-                                    if let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-                                       let bundleVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
-                                       let mythicVersion: SemanticVersion = .init("\(shortVersion)+\(bundleVersion)") {
-                                        Text(mythicVersion.prettyString)
-                                    }
-                                    
-                                    if let engineVersion {
-                                        Text("Engine \(engineVersion.prettyString)")
-                                    }
-                                }
-                                .task { @MainActor in
-                                    engineVersion = await Engine.installedVersion
-                                }
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                        // the name and versions stay visible, whether or not the pointer is over the window.
+                        Text("Mythic")
+                            .font(.largeTitle)
+                        Text("© by vapidinfinity ✦")
+
+                        Divider()
+                            .frame(width: 100)
+
+                        VStack {
+                            if let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                               let bundleVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+                               let mythicVersion: SemanticVersion = .init("\(shortVersion)+\(bundleVersion)") {
+                                Text(mythicVersion.prettyString)
                             }
-                            .blur(radius: showGradientView ? 30 : 0)
+
+                            if let engineVersion {
+                                Text("Engine \(engineVersion.prettyString)")
+                            }
                         }
+                        .task { @MainActor in
+                            engineVersion = await Engine.installedVersion
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        // versions are often copied into bug reports
+                        .textSelection(.enabled)
                     }
                     .id(1)
                     .frame(height: 400)
                     .overlay(alignment: .bottom) {
                         Button {
-                            withAnimation(.easeInOut) {
+                            withAnimation(reduceMotion ? nil : .easeInOut) {
                                 proxy.scrollTo(2)
                             }
-                            
                         } label: {
                             VStack {
                                 if isChevronHovered {
@@ -83,13 +82,14 @@ struct AboutView: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .symbolEffect(.pulse)
+                        .symbolEffect(.pulse, isActive: !reduceMotion)
                         .onHover { hovered in
-                            withAnimation(.easeInOut(duration: 0.4)) {
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.4)) {
                                 isChevronHovered = hovered
                             }
                         }
                         .padding()
+                        .accessibilityLabel("Scroll to acknowledgements")
                     }
                     
                     Divider()
@@ -134,17 +134,14 @@ struct AboutView: View {
                 }
             }
             .background(showGradientView ? nil : WindowBlurView().ignoresSafeArea())
-            .background(showGradientView ? ColorfulView(color: $colorfulAnimationColors, speed: $colorfulAnimationSpeed, noise: $colorfulAnimationNoise).ignoresSafeArea() : nil)
+            // with Reduce Motion, the gradient is drawn but doesn't move.
+            .background(showGradientView ? ColorfulView(color: $colorfulAnimationColors, speed: .constant(reduceMotion ? 0 : colorfulAnimationSpeed), noise: $colorfulAnimationNoise).ignoresSafeArea() : nil)
+            // the gradient is dark in either appearance, so text atop it must be light.
+            .environment(\.colorScheme, showGradientView ? .dark : colorScheme)
             .frame(width: 285, height: 400)
             .onHover { hovering in
-                withAnimation(.easeInOut(duration: 1)) {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 1)) {
                     showGradientView = hovering
-                }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    withAnimation(.easeInOut(duration: 0.7)) {
-                        animateTextView = hovering
-                    }
                 }
             }
             .fixedSize()
